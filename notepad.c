@@ -23,10 +23,12 @@ static int activeTab = -1;
 // helper: save current edit contents into active slot
 void SaveCurrentEditToSlot()
 {
-  if (activeTab < 0) return;
+  if (activeTab < 0)
+    return;
   int len = GetWindowTextLengthA(hEdit);
-  char *buf = (char*)malloc(len + 1);
-  if (!buf) return;
+  char *buf = (char *)malloc(len + 1);
+  if (!buf)
+    return;
   GetWindowTextA(hEdit, buf, len + 1);
   free(buffers[activeTab]);
   buffers[activeTab] = buf;
@@ -37,7 +39,8 @@ void SaveCurrentEditToSlot()
 // helper: load slot into edit control
 void LoadSlotToEdit(int idx)
 {
-  if (idx < 0 || idx >= tabCount) return;
+  if (idx < 0 || idx >= tabCount)
+    return;
   ignoreChange = 1;
   SetWindowTextA(hEdit, buffers[idx] ? buffers[idx] : "");
   ignoreChange = 0;
@@ -47,10 +50,16 @@ void LoadSlotToEdit(int idx)
 // create a new empty tab and switch to it
 void CreateNewTabAndSwitch()
 {
-  if (tabCount >= MAX_TABS) { MessageBoxA(hMainWnd, "Maximum tabs reached.", "Error", MB_OK | MB_ICONERROR); return; }
-  if (activeTab >= 0) SaveCurrentEditToSlot();
-  buffers[tabCount] = (char*)malloc(1);
-  if (buffers[tabCount]) buffers[tabCount][0] = '\0';
+  if (tabCount >= MAX_TABS)
+  {
+    MessageBoxA(hMainWnd, "Maximum tabs reached.", "Error", MB_OK | MB_ICONERROR);
+    return;
+  }
+  if (activeTab >= 0)
+    SaveCurrentEditToSlot();
+  buffers[tabCount] = (char *)malloc(1);
+  if (buffers[tabCount])
+    buffers[tabCount][0] = '\0';
   buffer_lens[tabCount] = 0;
   filenames[tabCount][0] = '\0';
   modifieds[tabCount] = 0;
@@ -63,9 +72,12 @@ void CreateNewTabAndSwitch()
 // switch to an existing tab index
 void SwitchToTab(int idx)
 {
-  if (idx < 0 || idx >= tabCount) return;
-  if (idx == activeTab) return;
-  if (activeTab >= 0) SaveCurrentEditToSlot();
+  if (idx < 0 || idx >= tabCount)
+    return;
+  if (idx == activeTab)
+    return;
+  if (activeTab >= 0)
+    SaveCurrentEditToSlot();
   activeTab = idx;
   LoadSlotToEdit(activeTab);
   UpdateTitle();
@@ -75,13 +87,17 @@ void UpdateTitle()
 {
   char title[MAX_PATH + 64];
   const char *name = "Untitled";
-  if (activeTab >= 0 && filenames[activeTab][0] != '\0') name = filenames[activeTab];
-  if (activeTab >= 0) {
+  if (activeTab >= 0 && filenames[activeTab][0] != '\0')
+    name = filenames[activeTab];
+  if (activeTab >= 0)
+  {
     if (modifieds[activeTab])
       snprintf(title, sizeof(title), "%s - Notepad* (%d/%d)", name, activeTab + 1, tabCount);
     else
       snprintf(title, sizeof(title), "%s - Notepad (%d/%d)", name, activeTab + 1, tabCount);
-  } else {
+  }
+  else
+  {
     snprintf(title, sizeof(title), "%s - Notepad", name);
   }
   SetWindowTextA(hMainWnd, title);
@@ -89,7 +105,8 @@ void UpdateTitle()
 
 int PromptSaveIfNeeded()
 {
-  if (activeTab < 0) return IDOK;
+  if (activeTab < 0)
+    return IDOK;
   if (!modifieds[activeTab])
     return IDOK;
   int r = MessageBoxA(hMainWnd, "The text has changed. Do you want to save changes?", "Notepad", MB_YESNOCANCEL | MB_ICONQUESTION);
@@ -102,18 +119,22 @@ int PromptSaveIfNeeded()
 
 int SaveToFileIndex(int idx, const char *fname)
 {
-  if (idx < 0 || idx >= tabCount) return 0;
+  if (idx < 0 || idx >= tabCount)
+    return 0;
   FILE *f = fopen(fname, "wb");
-  if (!f) return 0;
+  if (!f)
+    return 0;
   // ensure buffer up-to-date
-  if (idx == activeTab) SaveCurrentEditToSlot();
+  if (idx == activeTab)
+    SaveCurrentEditToSlot();
   if (buffers[idx] && buffer_lens[idx] > 0)
     fwrite(buffers[idx], 1, buffer_lens[idx], f);
   fclose(f);
   strncpy(filenames[idx], fname, MAX_PATH - 1);
   filenames[idx][MAX_PATH - 1] = '\0';
   modifieds[idx] = 0;
-  if (idx == activeTab) SendMessage(hEdit, EM_SETMODIFY, FALSE, 0);
+  if (idx == activeTab)
+    SendMessage(hEdit, EM_SETMODIFY, FALSE, 0);
   UpdateTitle();
   return 1;
 }
@@ -144,7 +165,8 @@ int DoSaveAs()
 
 int DoSave()
 {
-  if (activeTab < 0) return 0;
+  if (activeTab < 0)
+    return 0;
   if (filenames[activeTab][0] == '\0')
     return DoSaveAs();
   return SaveToFileIndex(activeTab, filenames[activeTab]);
@@ -153,8 +175,13 @@ int DoSave()
 int DoOpen()
 {
   int res = PromptSaveIfNeeded();
-  if (res == IDCANCEL) return 0;
-  if (res == IDYES) { if (!DoSave()) return 0; }
+  if (res == IDCANCEL)
+    return 0;
+  if (res == IDYES)
+  {
+    if (!DoSave())
+      return 0;
+  }
 
   char fname[MAX_PATH] = "";
   OPENFILENAMEA ofn;
@@ -168,18 +195,33 @@ int DoOpen()
   if (GetOpenFileNameA(&ofn))
   {
     FILE *f = fopen(fname, "rb");
-    if (!f) { MessageBoxA(hMainWnd, "Failed to open file.", "Error", MB_OK | MB_ICONERROR); return 0; }
+    if (!f)
+    {
+      MessageBoxA(hMainWnd, "Failed to open file.", "Error", MB_OK | MB_ICONERROR);
+      return 0;
+    }
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
     fseek(f, 0, SEEK_SET);
     char *buf = (char *)malloc(sz + 1);
-    if (!buf) { fclose(f); MessageBoxA(hMainWnd, "Out of memory.", "Error", MB_OK | MB_ICONERROR); return 0; }
+    if (!buf)
+    {
+      fclose(f);
+      MessageBoxA(hMainWnd, "Out of memory.", "Error", MB_OK | MB_ICONERROR);
+      return 0;
+    }
     fread(buf, 1, sz, f);
     buf[sz] = '\0';
     fclose(f);
     // open in a new tab
-    if (tabCount >= MAX_TABS) { free(buf); MessageBoxA(hMainWnd, "Too many tabs open.", "Error", MB_OK | MB_ICONERROR); return 0; }
-    if (activeTab >= 0) SaveCurrentEditToSlot();
+    if (tabCount >= MAX_TABS)
+    {
+      free(buf);
+      MessageBoxA(hMainWnd, "Too many tabs open.", "Error", MB_OK | MB_ICONERROR);
+      return 0;
+    }
+    if (activeTab >= 0)
+      SaveCurrentEditToSlot();
     buffers[tabCount] = buf;
     buffer_lens[tabCount] = (int)sz;
     strncpy(filenames[tabCount], fname, MAX_PATH - 1);
@@ -197,14 +239,22 @@ int DoOpen()
 void DoNew()
 {
   int res = PromptSaveIfNeeded();
-  if (res == IDCANCEL) return;
-  if (res == IDYES) { if (!DoSave()) return; }
+  if (res == IDCANCEL)
+    return;
+  if (res == IDYES)
+  {
+    if (!DoSave())
+      return;
+  }
   // replace current tab with empty document
-  if (activeTab < 0) CreateNewTabAndSwitch();
-  else {
+  if (activeTab < 0)
+    CreateNewTabAndSwitch();
+  else
+  {
     free(buffers[activeTab]);
-    buffers[activeTab] = (char*)malloc(1);
-    if (buffers[activeTab]) buffers[activeTab][0] = '\0';
+    buffers[activeTab] = (char *)malloc(1);
+    if (buffers[activeTab])
+      buffers[activeTab][0] = '\0';
     buffer_lens[activeTab] = 0;
     filenames[activeTab][0] = '\0';
     modifieds[activeTab] = 0;
@@ -285,12 +335,19 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     lf.lfWeight = FW_NORMAL;
     strncpy(lf.lfFaceName, "Consolas", LF_FACESIZE - 1);
     hEditorFont = CreateFontIndirectA(&lf);
-        if (hEditorFont)
+    if (hEditorFont)
       SendMessage(hEdit, WM_SETFONT, (WPARAM)hEditorFont, TRUE);
-        // initialize first tab
-        for (int i = 0; i < MAX_TABS; ++i) { buffers[i] = NULL; buffer_lens[i] = 0; filenames[i][0] = '\0'; modifieds[i] = 0; }
-        tabCount = 0; activeTab = -1;
-        CreateNewTabAndSwitch();
+    // initialize first tab
+    for (int i = 0; i < MAX_TABS; ++i)
+    {
+      buffers[i] = NULL;
+      buffer_lens[i] = 0;
+      filenames[i][0] = '\0';
+      modifieds[i] = 0;
+    }
+    tabCount = 0;
+    activeTab = -1;
+    CreateNewTabAndSwitch();
   }
   break;
   case WM_SIZE:
@@ -303,14 +360,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
   {
     int id = LOWORD(wParam);
     int code = HIWORD(wParam);
-            if (id == IDC_EDIT && code == EN_CHANGE)
-            {
-              if (!ignoreChange && activeTab >= 0)
-              {
-                modifieds[activeTab] = 1;
-                UpdateTitle();
-              }
-            }
+    if (id == IDC_EDIT && code == EN_CHANGE)
+    {
+      if (!ignoreChange && activeTab >= 0)
+      {
+        modifieds[activeTab] = 1;
+        UpdateTitle();
+      }
+    }
     switch (id)
     {
     case 1:
@@ -321,21 +378,37 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       break; // File->New Tab
     case 7:
       // Close tab
-      if (activeTab < 0) break;
+      if (activeTab < 0)
+        break;
       {
         int r = PromptSaveIfNeeded();
-        if (r == IDCANCEL) break;
-        if (r == IDYES) { if (!DoSave()) break; }
+        if (r == IDCANCEL)
+          break;
+        if (r == IDYES)
+        {
+          if (!DoSave())
+            break;
+        }
         // free current
-        free(buffers[activeTab]); buffers[activeTab] = NULL;
+        free(buffers[activeTab]);
+        buffers[activeTab] = NULL;
         // shift remaining
-        for (int k = activeTab + 1; k < tabCount; ++k) {
-          buffers[k-1] = buffers[k]; buffer_lens[k-1] = buffer_lens[k]; modifieds[k-1] = modifieds[k]; memcpy(filenames[k-1], filenames[k], MAX_PATH);
+        for (int k = activeTab + 1; k < tabCount; ++k)
+        {
+          buffers[k - 1] = buffers[k];
+          buffer_lens[k - 1] = buffer_lens[k];
+          modifieds[k - 1] = modifieds[k];
+          memcpy(filenames[k - 1], filenames[k], MAX_PATH);
         }
         tabCount--;
-        if (tabCount == 0) { CreateNewTabAndSwitch(); }
-        else {
-          if (activeTab >= tabCount) activeTab = tabCount - 1;
+        if (tabCount == 0)
+        {
+          CreateNewTabAndSwitch();
+        }
+        else
+        {
+          if (activeTab >= tabCount)
+            activeTab = tabCount - 1;
           LoadSlotToEdit(activeTab);
           UpdateTitle();
         }
@@ -394,8 +467,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     if (hEditorFont)
       DeleteObject(hEditorFont);
     // free buffers
-    for (int i = 0; i < tabCount; ++i) {
-      free(buffers[i]); buffers[i] = NULL;
+    for (int i = 0; i < tabCount; ++i)
+    {
+      free(buffers[i]);
+      buffers[i] = NULL;
     }
     PostQuitMessage(0);
     break;
